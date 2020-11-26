@@ -12,7 +12,7 @@ public class Program {
 
 	public static void main(String[] args) {
 
-		String path = "/home/gabriel/Documents/UFPA/Biod/teste.fasta";
+		String path = "pathForYourFastaFile";
 
 		Map<String, String> mountSequencings = new HashMap<String, String>();
 
@@ -45,7 +45,7 @@ public class Program {
 
 		System.out.println(scoresOfSequencings);
 		
-		writerResult(mountSequencings, "/home/gabriel/Documents/UFPA/Biod/testeesc.txt");
+		writerResult(scoresOfSequencings, "pathForYourResult");
 	}
 
 	public static Map<String, String> compareSequencings(Map<String, String> mountSequencings) {
@@ -65,7 +65,7 @@ public class Program {
 							.substring(otherSequencing.length() - suffixSize, otherSequencing.length());
 					double distanceBetweenSequencings = distanceOfLevenshtein(preffixOfSequencing, suffixOfOtherSequencing);
 
-					if (100.0 - (double) (distanceBetweenSequencings / otherSequencing.length() * 100.0) > 70) {
+					if (100.0 - (double) (distanceBetweenSequencings / otherSequencing.length() * 100.0) == 100) {
 						String sequencingWithoutPreffix = sequencing.substring(preffixSize - 1, sequencing.length());
 						String otherSequencingWithoutSuffix = otherSequencing.substring(0,
 								otherSequencing.length() - suffixSize + 1);
