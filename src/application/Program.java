@@ -7,16 +7,20 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 public class Program {
 
 	public static void main(String[] args) {
-
-		String path = "pathForYourFastaFile";
+		
+		Scanner sc = new Scanner(System.in);
+		System.out.println("Enter the path for your fasta file: ");
+		String path = sc.nextLine();
 
 		Map<String, String> mountSequencings = new HashMap<String, String>();
 
 		try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+			System.out.println("Reading the fasta file");
 			StringBuilder sb = new StringBuilder();
 			String line = br.readLine();
 			String header = "";
@@ -35,17 +39,18 @@ public class Program {
 					mountSequencings.put(header, sb.toString());
 				}
 			}
+			System.out.println("Read complete");
 		} catch (IOException e) {
 			System.out.println(e.getMessage());
 		}
-
-		System.out.println(mountSequencings);
-
-		Map<String, String> scoresOfSequencings = compareSequencings(mountSequencings);
-
-		System.out.println(scoresOfSequencings);
 		
-		writerResult(scoresOfSequencings, "pathForYourResult");
+		System.out.println("Comparing sequencings");
+		Map<String, String> scoresOfSequencings = compareSequencings(mountSequencings);
+		
+		System.out.println("Enter the path for your result file: ");
+		String pathForYourResult = sc.nextLine();
+		
+		writerResult(scoresOfSequencings, pathForYourResult);
 	}
 
 	public static Map<String, String> compareSequencings(Map<String, String> mountSequencings) {
@@ -107,6 +112,7 @@ public class Program {
 				bw.write(mountSequencings.get(key));
 				bw.newLine();
 			}
+			System.out.println("Write complete, file available at: " + path);
 		}
 		catch(IOException e) {
 			System.out.println(e.getMessage());
