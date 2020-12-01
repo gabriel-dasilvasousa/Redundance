@@ -14,7 +14,7 @@ public class Program {
 	public static void main(String[] args) {
 		
 		Scanner sc = new Scanner(System.in);
-		System.out.println("Enter the path for your fasta file: ");
+		System.out.println("Enter the complete path for your fasta file: ");
 		String path = sc.nextLine();
 
 		Map<String, String> mountSequencings = new HashMap<String, String>();
@@ -47,10 +47,10 @@ public class Program {
 		System.out.println("Comparing sequencings");
 		Map<String, String> scoresOfSequencings = compareSequencings(mountSequencings);
 		
-		System.out.println("Enter the path for your result file: ");
+		System.out.println("Enter the path for your result file: (no necessary name file)");
 		String pathForYourResult = sc.nextLine();
 		
-		writerResult(scoresOfSequencings, pathForYourResult);
+		writerResult(scoresOfSequencings, pathForYourResult+"/result.txt");
 	}
 
 	public static Map<String, String> compareSequencings(Map<String, String> mountSequencings) {
@@ -71,11 +71,9 @@ public class Program {
 					double distanceBetweenSequencings = distanceOfLevenshtein(preffixOfSequencing, suffixOfOtherSequencing);
 
 					if (100.0 - (double) (distanceBetweenSequencings / otherSequencing.length() * 100.0) == 100) {
-						String sequencingWithoutPreffix = sequencing.substring(preffixSize - 1, sequencing.length());
-						String otherSequencingWithoutSuffix = otherSequencing.substring(0,
-								otherSequencing.length() - suffixSize + 1);
+						String sequencingWithoutPreffix = sequencing.substring(preffixSize, sequencing.length());
 						scores.put(key + otherKey,
-								sequencingWithoutPreffix + suffixOfOtherSequencing + otherSequencingWithoutSuffix);
+								otherSequencing + sequencingWithoutPreffix);
 					}
 				}
 			}
