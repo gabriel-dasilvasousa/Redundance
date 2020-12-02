@@ -44,40 +44,91 @@ public class Program {
 			System.out.println(e.getMessage());
 		}
 		
+		System.out.println("Enter the minimum similarity between sequencings");
+		double similarity = sc.nextDouble();
+		
 		System.out.println("Comparing sequencings");
-		Map<String, String> scoresOfSequencings = compareSequencings(mountSequencings);
+		Map<String, String> scoresOfSequencings = compareSequencings(mountSequencings, similarity);
 		
 		System.out.println("Enter the path for your result file: (no necessary name file)");
+		sc.nextLine();
 		String pathForYourResult = sc.nextLine();
 		
-		writerResult(scoresOfSequencings, pathForYourResult+"/result.txt");
+		writerResult(scoresOfSequencings, pathForYourResult + "/result.txt");
 	}
 
-	public static Map<String, String> compareSequencings(Map<String, String> mountSequencings) {
+	public static Map<String, String> compareSequencings(Map<String, String> mountSequencings, double similarity) {
 
 		Map<String, String> scores = new HashMap<>();
 		
+		//compare preffix with suffix
 		for (String key : mountSequencings.keySet()) {
+			int count = 0;
 			String sequencing = mountSequencings.get(key);
-			int preffixSize = sequencing.length() * 30 / 100;
+			int preffixSize = Math.round(sequencing.length() * 30 / 100);
 			String preffixOfSequencing = sequencing.substring(0, preffixSize);
+			SequencingBuilder sequencingBuilder = new SequencingBuilder();
 
 			for (String otherKey : mountSequencings.keySet()) {
 				String otherSequencing = mountSequencings.get(otherKey);
 				if (otherSequencing != sequencing) {
-					int suffixSize = otherSequencing.length() * 30 / 100;
+					int suffixSize = Math.round(otherSequencing.length() * 30 / 100);
 					String suffixOfOtherSequencing = otherSequencing
 							.substring(otherSequencing.length() - suffixSize, otherSequencing.length());
 					double distanceBetweenSequencings = distanceOfLevenshtein(preffixOfSequencing, suffixOfOtherSequencing);
-
-					if (100.0 - (double) (distanceBetweenSequencings / otherSequencing.length() * 100.0) == 100) {
-						String sequencingWithoutPreffix = sequencing.substring(preffixSize, sequencing.length());
-						scores.put(key + otherKey,
-								otherSequencing + sequencingWithoutPreffix);
+					double similarityBetweenSequencingsInPercent = 100.0 - (double) (distanceBetweenSequencings / sequencing.length() * 100.0);
+					
+					if (similarityBetweenSequencingsInPercent >= similarity) {
+						if(similarityBetweenSequencingsInPercent>sequencingBuilder.getSimilarity()) {
+							String sequencingWithoutPreffix = sequencing.substring(preffixSize, sequencing.length());
+							sequencingBuilder.setHeader("preffix " + key + "suffix" + otherKey);
+							sequencingBuilder.setSequencing(otherSequencing + sequencingWithoutPreffix);
+							sequencingBuilder.setSimilarity(similarityBetweenSequencingsInPercent);
+						}
 					}
+				}
+				count++;
+				if(count == mountSequencings.size()) {
+					scores.put(sequencingBuilder.getHeader(), sequencingBuilder.getSequencing());
 				}
 			}
 		}
+		
+		//compare suffix with preffix
+		for(String key : mountSequencings.keySet()) {
+			int count = 0;
+			String sequencing = mountSequencings.get(key);
+			int suffixSize = Math.round(sequencing.length() * 30 / 100);
+			String suffixOfSequencing = sequencing.substring(sequencing.length() - suffixSize, sequencing.length());
+			SequencingBuilder sequencingBuilder = new SequencingBuilder();
+			
+			for(String otherKey : mountSequencings.keySet()) {
+				String otherSequencing = mountSequencings.get(otherKey);
+				if(otherSequencing != sequencing) {
+					int preffixSize = Math.round(otherSequencing.length() * 30/100);
+					String preffixOfOtherSequencing = otherSequencing.substring(0, preffixSize);
+					
+					double distanceBetweenSequencings = distanceOfLevenshtein(suffixOfSequencing, preffixOfOtherSequencing);
+					double similarityBetweenSequencingsInPercent = 100.0 - (double) (distanceBetweenSequencings / sequencing.length() * 100.0);
+					
+					
+					
+					if(similarityBetweenSequencingsInPercent >= similarity) {
+						if(similarityBetweenSequencingsInPercent>sequencingBuilder.getSimilarity()) {
+							String otherSequencingWithoutPreffix = otherSequencing.substring(preffixSize, otherSequencing.length());
+							sequencingBuilder.setHeader("suffix" + key + "preffix" + otherKey);
+							sequencingBuilder.setSequencing(sequencing + otherSequencingWithoutPreffix);
+							sequencingBuilder.setSimilarity(similarityBetweenSequencingsInPercent);
+						}
+					}
+				}
+				count++;
+				if(count == mountSequencings.size()) {
+					scores.put(sequencingBuilder.getHeader(), sequencingBuilder.getSequencing());
+				}
+			}
+		}
+		
 		return scores;
 	}
 
