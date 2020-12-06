@@ -46,23 +46,23 @@ public class Program {
 
 		System.out.println("Enter the minimum similarity between sequencings");
 		double similarity = sc.nextDouble();
+		if (similarity > 100)
+			throw new IllegalArgumentException("The similarity cannot be longer than 100 percent");
 
 		System.out.println("Comparing sequencings");
-		Map<Sequencing, Double> scoresWith100 = new HashMap<>();
 		Map<Sequencing, Double> sequencingsDown100 = new HashMap<>();
 		Map<String, String> sequencingsUnits = new HashMap<>();
-		compareSequencings(mountSequencings, similarity, scoresWith100, sequencingsDown100, sequencingsUnits);
+		compareSequencings(mountSequencings, similarity, sequencingsDown100, sequencingsUnits);
 
 		System.out.println("Enter the path for your result file: (no necessary name file)");
 		sc.nextLine();
 		String pathForYourResult = sc.nextLine();
 
-		writerResult(scoresWith100, sequencingsDown100, sequencingsUnits, pathForYourResult + "/result.txt");
+		writerResult(sequencingsDown100, sequencingsUnits, pathForYourResult + "/result.txt");
 	}
 
 	public static void compareSequencings(Map<String, String> mountSequencings, double similarity,
-			Map<Sequencing, Double> scoresWith100, Map<Sequencing, Double> sequencingsDown100,
-			Map<String, String> sequencingsUnits) {
+			Map<Sequencing, Double> sequencingsWithSimilarity, Map<String, String> sequencingsUnits) {
 
 		// compare suffix with preffix
 		for (String key : mountSequencings.keySet()) {
@@ -74,56 +74,53 @@ public class Program {
 				String otherSequencing = mountSequencings.get(otherKey);
 				if (otherSequencing != sequencing) {
 					int suffixSize = Math.round(sequencing.length() * 30 / 100);
-					int preffixSize = Math.round(otherSequencing.length() * 30 / 100);
 
-					// verifing if the preffix or suffix are longer than other sequencing compared
-					if (preffixSize >= sequencing.length()) {
-						preffixSize = suffixSize;
-					}
+					// verifing if the suffix is longer than other sequencing compared
 					if (suffixSize >= otherSequencing.length()) {
-						suffixSize = preffixSize;
+						suffixSize = Math.round(otherSequencing.length() * 30 / 100);
 					}
 
 					String suffixOfSequencing = sequencing.substring(sequencing.length() - suffixSize,
 							sequencing.length());
-					String preffixOfOtherSequencing = otherSequencing.substring(0, preffixSize);
+					String preffixOfOtherSequencing = otherSequencing.substring(0, suffixSize);
 
 					double distanceBetweenSequencings = distanceOfLevenshtein(suffixOfSequencing,
 							preffixOfOtherSequencing);
 					double similarityBetweenSequencingsInPercent = 100.0
 							- (double) (distanceBetweenSequencings / sequencing.length() * 100.0);
 
-					if (similarityBetweenSequencingsInPercent == 100) {
-						String otherSequencingWithoutPreffix = otherSequencing.substring(preffixSize,
-								otherSequencing.length());
-						SequencingUnit newSequencingUnit = new SequencingUnit();
-						newSequencingUnit.setHeader(key + "Unit" + otherKey);
-						newSequencingUnit.setSequencing(sequencing + otherSequencingWithoutPreffix);
-						newSequencingUnit.setSimilarity(100.0);
-						scoresWith100.put(newSequencingUnit, newSequencingUnit.getSimilarity());
-						sequencingAux.setHeader("");
-						sequencingAux.setSimilarity(100.0);
-
-					} else if (similarityBetweenSequencingsInPercent >= similarity) {
+					if (similarityBetweenSequencingsInPercent >= similarity) {
 						if (similarityBetweenSequencingsInPercent > sequencingAux.getSimilarity()) {
-							String otherSequencingWithoutPreffix = otherSequencing.substring(preffixSize,
+							String otherSequencingWithoutPreffix = otherSequencing.substring(suffixSize,
 									otherSequencing.length());
 							String sequencingWithoutSuffix = sequencing.substring(0, sequencing.length() - suffixSize);
 							sequencingAux.setHeader(key);
 							sequencingAux.setSequencing(sequencing);
 							sequencingAux.setSimilarity(similarityBetweenSequencingsInPercent);
-							sequencingAux.setHeaderConcatenated(key + "Unit" + otherKey);
-							// How to concatenate when the similarity < 100?
-							String conc = concatenateStringsWithoutRedundances(suffixOfSequencing,
-									preffixOfOtherSequencing);
-							sequencingAux.setSequencingConcatenated(
-									sequencingWithoutSuffix + conc + otherSequencingWithoutPreffix);
+							
+
+							if (sequencingAux.getSimilarity() == 100) {
+								sequencingAux.setHeaderConcatenated(key + "Unit" + otherKey);
+								sequencingAux.setSequencingConcatenated(
+										sequencingWithoutSuffix + suffixOfSequencing + otherSequencingWithoutPreffix);
+							}
+
+							else if (sequencingAux.getSimilarity() < 100
+									&& sequencingAux.getSimilarity() >= similarity) {
+								sequencingAux.setHeaderConcatenated(key + "Concatenated" + otherKey);
+								String conc = concatenateStringsWithoutRedundances(suffixOfSequencing,
+										preffixOfOtherSequencing);
+								sequencingAux.setSequencingConcatenated(
+										sequencingWithoutSuffix + conc + otherSequencingWithoutPreffix);
+							}
 						}
 					}
 				}
 				count++;
-				if (count == mountSequencings.size() && sequencingAux.getSimilarity() > similarity && !sequencingAux.getHeader().equals("")) {
-					sequencingsDown100.put(new Sequencing(sequencingAux.getHeader(), sequencingAux.getSequencing()),
+				if (count == mountSequencings.size() && sequencingAux.getSimilarity() > similarity
+						&& !sequencingAux.getHeader().equals("")) {
+					sequencingsWithSimilarity.put(
+							new Sequencing(sequencingAux.getHeader(), sequencingAux.getSequencing()),
 							sequencingAux.getSimilarity());
 					sequencingsUnits.put(sequencingAux.getHeaderConcatenated(),
 							sequencingAux.getSequencingConcatenated());
@@ -141,51 +138,49 @@ public class Program {
 				String otherSequencing = mountSequencings.get(otherKey);
 				if (otherSequencing != sequencing) {
 					int preffixSize = Math.round(sequencing.length() * 30 / 100);
-					int suffixSize = Math.round(otherSequencing.length() * 30 / 100);
 
-					// Verifying if the prefix or suffix are longer than other sequencing compared
+					// Verifying if the prefix is longer than other sequencing compared
 					if (preffixSize >= otherSequencing.length()) {
-						preffixSize = suffixSize;
-					}
-					if (suffixSize >= sequencing.length()) {
-						suffixSize = preffixSize;
+						preffixSize = Math.round(otherSequencing.length() * 30 / 100);
 					}
 
 					String preffixOfSequencing = sequencing.substring(0, preffixSize);
-					String suffixOfOtherSequencing = otherSequencing.substring(otherSequencing.length() - suffixSize,
+					String suffixOfOtherSequencing = otherSequencing.substring(otherSequencing.length() - preffixSize,
 							otherSequencing.length());
 					double distanceBetweenSequencings = distanceOfLevenshtein(preffixOfSequencing,
 							suffixOfOtherSequencing);
 					double similarityBetweenSequencingsInPercent = 100.0
 							- (double) (distanceBetweenSequencings / sequencing.length() * 100.0);
 
-					if (similarityBetweenSequencingsInPercent == 100) {
-						String sequencingWithoutPreffix = sequencing.substring(preffixSize, sequencing.length());
-						SequencingUnit newSequencingUnit = new SequencingUnit();
-						newSequencingUnit.setHeader(key + "Unit" + otherKey);
-						newSequencingUnit.setSequencing(otherSequencing + sequencingWithoutPreffix);
-						newSequencingUnit.setSimilarity(100.0);
-						scoresWith100.put(newSequencingUnit, newSequencingUnit.getSimilarity());
-						sequencingAux.setHeader("");
-						sequencingAux.setSimilarity(100.0);
-					} else if (similarityBetweenSequencingsInPercent >= similarity) {
+					if (similarityBetweenSequencingsInPercent >= similarity) {
 						if (similarityBetweenSequencingsInPercent > sequencingAux.getSimilarity()) {
 							String sequencingWithoutPreffix = sequencing.substring(preffixSize, sequencing.length());
 							String otherSequencingWithoutSuffix = otherSequencing.substring(0,
-									sequencing.length() - suffixSize);
+									sequencing.length() - preffixSize);
 							sequencingAux.setHeader(key);
 							sequencingAux.setSequencing(sequencing);
 							sequencingAux.setSimilarity(similarityBetweenSequencingsInPercent);
-							// How to concatenate when the similarity < 100?
-							sequencingAux.setHeaderConcatenated(key + "Unit" + otherKey);
-							String con = concatenateStringsWithoutRedundances(preffixOfSequencing, suffixOfOtherSequencing);
-							sequencingAux.setSequencingConcatenated(otherSequencingWithoutSuffix + con + sequencingWithoutPreffix);
+							
+
+							if (sequencingAux.getSimilarity() == 100) {
+								sequencingAux.setHeaderConcatenated(key + "Unit" + otherKey);
+								sequencingAux.setSequencingConcatenated(otherSequencingWithoutSuffix + sequencing);
+							} else if (sequencingAux.getSimilarity() < 100
+									&& sequencingAux.getSimilarity() >= similarity) {
+								sequencingAux.setHeaderConcatenated(key + "Concatenated" + otherKey);
+								String con = concatenateStringsWithoutRedundances(preffixOfSequencing,
+										suffixOfOtherSequencing);
+								sequencingAux.setSequencingConcatenated(
+										otherSequencingWithoutSuffix + con + sequencingWithoutPreffix);
+							}
 						}
 					}
 				}
 				count++;
-				if (count == mountSequencings.size() && sequencingAux.getSimilarity() > similarity && !sequencingAux.getHeader().equals("")) {
-					sequencingsDown100.put(new Sequencing(sequencingAux.getHeader(), sequencingAux.getSequencing()),
+				if (count == mountSequencings.size() && sequencingAux.getSimilarity() > similarity
+						&& !sequencingAux.getHeader().equals("")) {
+					sequencingsWithSimilarity.put(
+							new Sequencing(sequencingAux.getHeader(), sequencingAux.getSequencing()),
 							sequencingAux.getSimilarity());
 					sequencingsUnits.put(sequencingAux.getHeaderConcatenated(),
 							sequencingAux.getSequencingConcatenated());
@@ -215,22 +210,15 @@ public class Program {
 		return costs[b.length()];
 	}
 
-	public static void writerResult(Map<Sequencing, Double> scoresWith100, Map<Sequencing,Double> sequencingsDown100, Map<String, String> sequencingsUnits, String path) {
+	public static void writerResult(Map<Sequencing, Double> sequencingsWithSimilarity, Map<String, String> sequencingsUnits,
+			String path) {
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(path))) {
-			for (Sequencing key : scoresWith100.keySet()) {
+			for (Sequencing key : sequencingsWithSimilarity.keySet()) {
 				bw.write(key.getHeader());
 				bw.newLine();
 				bw.write(key.getSequencing());
 				bw.newLine();
-				bw.write(Double.toString(scoresWith100.get(key)));
-				bw.newLine();
-			}
-			for (Sequencing key : sequencingsDown100.keySet()) {
-				bw.write(key.getHeader());
-				bw.newLine();
-				bw.write(key.getSequencing());
-				bw.newLine();
-				bw.write(Double.toString(sequencingsDown100.get(key)));
+				bw.write(Double.toString(sequencingsWithSimilarity.get(key)));
 				bw.newLine();
 			}
 			for (String key : sequencingsUnits.keySet()) {
@@ -245,26 +233,30 @@ public class Program {
 		}
 	}
 
-	public static String concatenateStringsWithoutRedundances(String a, String b) {
-		StringBuilder sb = new StringBuilder();
-		System.out.println(a);
-		System.out.println(b);
-		for (int i = 0; i < a.length(); i++) {
-			if (a.charAt(i) == b.charAt(i)) {
-				sb.append(a.charAt(i));
+	public static String concatenateStringsWithoutRedundances(String s1, String s2) {
+		StringBuilder result = new StringBuilder();
+		StringBuilder whenEquals = new StringBuilder();
+		StringBuilder whenThereIsDifferentOne = new StringBuilder();
+		StringBuilder whenThereIsDifferentTwo = new StringBuilder();
+		for (int i = 0; i < s1.length(); i++) {
+			if (s1.charAt(i) == s2.charAt(i)) {
+				if (whenThereIsDifferentOne.length() != 0)
+					result.append(whenThereIsDifferentOne.append(whenThereIsDifferentTwo));
+				whenThereIsDifferentOne.delete(0, whenThereIsDifferentOne.length());
+				whenThereIsDifferentTwo.delete(0, whenThereIsDifferentTwo.length());
+				whenEquals.append(s1.charAt(i));
 			} else {
-				int j = i;
-				while (a.charAt(j) != b.charAt(j)) {
-					sb.append(a.charAt(j));
-					j++;
+				if (whenEquals.length() != 0) {
+					result.append(whenEquals);
 				}
-				while (j != i) {
-					sb.append(b.charAt(i));
-					i++;
-				}
-				i--;
+				whenEquals.delete(0, whenEquals.length());
+				whenThereIsDifferentOne.append(s1.charAt(i));
+				whenThereIsDifferentTwo.append(s2.charAt(i));
 			}
 		}
-		return sb.toString();
+		result.append(whenEquals);
+		result.append(whenThereIsDifferentOne);
+		result.append(whenThereIsDifferentTwo);
+		return result.toString();
 	}
 }
