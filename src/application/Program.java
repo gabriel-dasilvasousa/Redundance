@@ -117,7 +117,7 @@ public class Program {
 					}
 				}
 				count++;
-				if (count == mountSequencings.size() && sequencingAux.getSimilarity() > similarity
+				if (count == mountSequencings.size() && sequencingAux.getSimilarity() >= similarity
 						&& !sequencingAux.getHeader().equals("")) {
 					sequencingsWithSimilarity.put(
 							new Sequencing(sequencingAux.getHeader(), sequencingAux.getSequencing()),
@@ -177,7 +177,7 @@ public class Program {
 					}
 				}
 				count++;
-				if (count == mountSequencings.size() && sequencingAux.getSimilarity() > similarity
+				if (count == mountSequencings.size() && sequencingAux.getSimilarity() >= similarity
 						&& !sequencingAux.getHeader().equals("")) {
 					sequencingsWithSimilarity.put(
 							new Sequencing(sequencingAux.getHeader(), sequencingAux.getSequencing()),
